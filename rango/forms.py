@@ -21,18 +21,6 @@ class PageForm(forms.ModelForm):
 						 help_text="Please enter the URL of the page.")
 	views = forms.IntegerField(widget=forms.HiddenInput(), initial=0)
 
-	class Meta:
-		model = Page
-
-		# what fields do we want to include in our form?
-		# this way we don't need every field in the model present
-		# some fields may allow NULL values, so we might not want to include them
-		# here we are hiding the foreign key
-		# we can either exclude the category field from the form:
-		exclude = ('category',)
-		# or specify the fields to include i.e. not category
-		# fields = ('title', 'url', 'views')
-
 	def clean(self):
 		cleaned_data = self.cleaned_data
 		url = cleaned_data.get('url')
@@ -44,3 +32,15 @@ class PageForm(forms.ModelForm):
 			cleaned_data['url'] = url
 
 			return cleaned_data
+
+	class Meta:
+		model = Page
+
+		# what fields do we want to include in our form?
+		# this way we don't need every field in the model present
+		# some fields may allow NULL values, so we might not want to include them
+		# here we are hiding the foreign key
+		# we can either exclude the category field from the form:
+		exclude = ('category',)
+		# or specify the fields to include i.e. not category
+		# fields = ('title', 'url', 'views')
