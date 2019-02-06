@@ -1,5 +1,6 @@
 from django.template.defaultfilters import slugify
 from django.db import models
+from django.contrib.auth.models import User
 
 # Create your models here.
 
@@ -28,6 +29,18 @@ class Page(models.Model):
 
 	def __str__(self):
 		return self.title
+
+class UserProfile(models.Model):
+	# this line is required - it links the UserProfile to a User model instance
+	user = models.OneToOneField(User)
+
+	# the additional attributes we wish to include
+	website = models.URLField(blank=True) #user does not have to supply a value for blank fields
+	picture = models.ImageField(upload_to='profile_images', blank=True) #connected with MEDIA_ROOT to provide a storage location for profile pictures
+
+	# override the __unicode__() method to return something meaningful
+	def __str__(self):
+		return self.user.username	
 
 
 		
