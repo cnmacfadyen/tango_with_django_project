@@ -6,6 +6,7 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpResponse
 from rango.models import Category
 from rango.forms import CategoryForm, PageForm, UserForm, UserProfileForm
+from datetime import datetime
 
 def index(request):
 
@@ -14,20 +15,36 @@ def index(request):
 	# retrieve only the top 5 or all if <5
 	# place the list in context_dict
 	# context_dict will be passed to the template engine
-
+	request.session.set_test_cookie()
 	category_list = Category.objects.order_by('-likes')[:5]
 	page_list = Page.objects.order_by('-views')[:5]
 	context_dict = {'categories': category_list, 'pages': page_list}
 
-	# render the response and send it back
-	return render(request, 'rango/index.html', context_dict)
+	# call the helper function to handle the cookies
+	visitor_cookie_handler(request)
+	context_dict['visits'] = request.session['visits']
+
+	# obtain response object early so we can add cookie information
+	response = render(request, 'rango/index.html', context=context_dict)
+	# return the response back to the user, updating any cookies that need changed
+	return response
 
 def about(request):
+	if request.session.test_cookie_worked():
+		print("TEST COOKIE WORKED!")
+		request.session.delete_test_cookie()
+
+	context_dict = {}
 	# prints out whether the method is a GET or POST
 	print(request.method)
 	# prints out the user name, if no one is logged in it prints 'AnonymousUser'
 	print(request.user)
-	return render(request, 'rango/about.html', {})
+
+	visitor_cookie_handler(request)
+	context_dict['visits'] = request.session['visits']
+
+	response = render(request, 'rango/about.html', context=context_dict)
+	return response
 
 def show_category(request, category_name_slug):
 	# create a context dictionary which we can pass
@@ -220,6 +237,38 @@ def user_logout(request):
 	logout(request)
 	# take the user back to the homepage
 	return HttpResponseRedirect(reverse('index'))
+
+# this is not a view, just a helper function because it doesn't return a response object
+# this helper function takes request and response objects because we want to be able to access 
+# the incoming cookies from the request and add or update cookies in the response
+
+def get_server_side_cookie(request, cookie, default_val=None):
+	val = request.session.get(cookie)
+	if not val:
+		val = default_val
+	return val
+
+def visitor_cookie_handler(request):
+	# get the no. of visits to the site
+	# if the cookie exists, the value returned is cast to an integer
+	# if the cookie doesn't exist, the the default value of 1 is used
+	visits = int(get_server_side_cookie(request, 'visits', '1'))
+	last_visit_cookie = get_server_side_cookie(request, 'last_visit', str(datetime.now()))
+	last_visit_time = datetime.strptime(last_visit_cookie[:-7], '%Y-%m-%d %H:%M:%S')
+	
+	# if it's been more than a day since the last visit...
+	if(datetime.now() - last_visit_time).seconds > 0:
+		visits = visits + 1
+		# update the last visit cookie now that we have updated the count
+		# store session cookies from the server side in the request.session[] dictionary
+		request.session['last_visit'] = str(datetime.now())
+	else:
+		# set the last visit cookie
+		request.session['last_visit'] = last_visit_cookie
+
+	# update/set the visits cookie
+	request.session['visits'] = visits
+
 
 
 
